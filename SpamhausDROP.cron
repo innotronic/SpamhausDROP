@@ -1,0 +1,6 @@
+#
+# SpamhausDROP.cron
+#
+
+/sbin/service SpamhausDROP update
+

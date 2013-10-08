@@ -1,0 +1,190 @@
+#!/bin/sh
+#
+# SpamhausDROP
+#
+# chkconfig: 2345 89 11
+# description: Applies the "Spamhaus Don't Route Or Peer" IP blacklist
+
+
+# source function library
+source /etc/init.d/functions
+
+
+# Config
+ConfigPath="/etc/sysconfig/SpamhausDROP"
+LockPath="/var/lock/subsys/SpamhausDROP"
+DataPath="/var/lib/SpamhausDROP.data"
+DataURL="http://www.spamhaus.org/drop/{drop,edrop}.lasso"
+
+
+# Read config
+if [ -r "${ConfigPath}" ]; then
+	source ${ConfigPath}
+fi
+
+
+# Create dirs
+mkdir -p $( dirname ${LockPath} )
+mkdir -p $( dirname ${DataPath} )
+
+
+function fetchData
+{
+	echo -n "Fetching SpamhausDROP IP blacklist "
+	
+	# Create temporary file
+	tmpPath=$( mktemp "SpamhausDROP.XXXXXXXXXX.data" )
+	
+	# Fetch data
+	curl -s -f "${DataURL}" |egrep -v '^[[:space:]]*(;|$)' >"${tmpPath}"
+	retCode=$?
+	
+	if [[ retCode -eq 0 ]]; then
+	
+		# Create data file if not exists
+		touch "${DataPath}"
+		
+		# If DROP changed, update data file
+		if diff -q "${tmpPath}" "${DataPath}" >/dev/null; then
+			rm -f "${tmpPath}"
+			passed
+			retCode=100
+		else
+			mv -f "${tmpPath}" "${DataPath}"
+			success
+		fi
+	
+	else
+	
+		rm -f "${tmpPath}"
+		failure
+	
+	fi
+	
+	echo
+	return ${retCode}
+}
+
+
+function applyRoute
+{
+	# Check for data
+	if [ ! -r "$1" ]; then
+		failure
+		echo		
+		return 1
+	fi
+	
+	
+	# Determine route action
+	if [ -n "$2" ]; then
+		routeAction=$2
+	else
+		routeAction='add'
+	fi
+	
+	
+	# Apply routes
+ 	while read ip comment; do
+ 		ip route ${routeAction} blackhole ${ip}
+	done <"$1"
+}
+
+
+function start
+{
+	echo -n "Applying SpamhausDROP IP blacklist "
+	
+	applyRoute "${DataPath}" add
+	retCode=$?
+	
+	if [[ retCode -eq 0 ]]; then
+		cat "${DataPath}" >"${LockPath}"
+		success
+	else
+		failure
+	fi
+	
+	echo
+	
+	return ${retCode}
+}
+
+
+function stop
+{
+	echo -n "Removing SpamhausDROP IP blacklist "
+	
+	applyRoute ${LockPath} delete
+	retCode=$?
+	
+	if [[ retCode -eq 0 ]]; then
+		rm -f "${LockPath}"
+		success
+	else
+		failure
+	fi
+	
+	echo
+	
+	return ${retCode}
+}
+
+
+retCode=0
+
+case "$1" in
+	
+	start)
+		if [ -f "${LockPath}" ]; then
+			echo "Spamhaus DROP IP blacklist allready active!"
+			exit -1
+		fi
+		
+		fetchData
+		start
+		retCode=$?
+		;;
+	
+	stop)
+		if [ ! -f "${LockPath}" ]; then
+			echo "Spamhaus DROP IP blacklist is NOT active!"
+			exit -1
+		fi
+
+		stop
+		retCode=$?
+		;;
+	
+	restart)
+		if [ -f "${LockPath}" ]; then
+			stop
+		fi
+		
+		fetchData
+		start
+		retCode=$?
+		;;
+	
+	update|reload)
+		if fetchData && [ -f "${LockPath}" ]; then
+			stop
+			start
+		fi
+		retCode=0
+		;;
+	
+	status)
+		if [ -f "${LockPath}" ]; then
+			echo "SpamhausDROP IP blacklist is active."
+		else
+			echo "SpamhausDROP IP blacklist is NOT active."
+		fi
+		;;
+	
+	*)
+		echo $"Usage: $0 {start|stop|restart|reload|update|status}"
+		exit 1
+esac
+
+exit ${retCode}
