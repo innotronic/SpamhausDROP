@@ -8,7 +8,7 @@ Source1: SpamhausDROP
 Source2: SpamhausDROP.cron
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildArch: noarch
-Requires: initscripts coreutils curl grep diff iproute
+Requires: initscripts coreutils curl grep diffutils iproute
 
 %description
 This System V init script fetches and adds or removes the Spamhaus DROP IP blacklist to the routing table.
