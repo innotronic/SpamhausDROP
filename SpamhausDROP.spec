@@ -1,7 +1,7 @@
 Name: SpamhausDROP
 Summary: Applies the "Spamhaus Don't Route Or Peer" IP blacklist
-Version: 1.1
-Release: 1
+Version: 1.2
+Release: 5
 License: GPL
 Group: System Environment/Network
 Source1: SpamhausDROP
@@ -34,7 +34,7 @@ rm -rf %{buildroot}
 
 %post
 /sbin/chkconfig --add SpamhausDROP
-/sbin/service SpamhausDROP start
+/sbin/service SpamhausDROP restart
 
 
 %preun
@@ -48,6 +48,9 @@ rm -rf %{buildroot}
 
 
 %changelog
+* Sun May 11 2014 Innotronic Ingenieurburo GmbH <http://www.inno.ch/> 1.2
+-Improve error handling
+-Add 'slient' mode used in scripts and as cron job
 * Tue Oct 08 2013 Innotronic Ingenieurburo GmbH <http://www.inno.ch/> 1.1
 -Optimize data handling
 -Store actual ruleset for later removal

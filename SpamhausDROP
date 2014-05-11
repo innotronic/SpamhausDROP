@@ -28,6 +28,25 @@ mkdir -p $( dirname ${LockPath} )
 mkdir -p $( dirname ${DataPath} )
 
 
+# Status constants
+StatusOK=0
+StatusFailed=255
+StatusPassed=128
+
+
+# Arguments
+while (( $# > 1 )); do
+	
+	case $1 in
+		--batch)
+			exec >/dev/null
+			;;
+	esac
+	
+	shift
+done
+
+
 function fetchData
 {
 	echo -n "Fetching SpamhausDROP IP blacklist "
@@ -39,7 +58,7 @@ function fetchData
 	curl -s -f "${DataURL}" |egrep -v '^[[:space:]]*(;|$)' >"${tmpPath}"
 	retCode=$?
 	
-	if [[ retCode -eq 0 ]]; then
+	if [[ ${retCode} == ${StatusOK} ]]; then
 	
 		# Create data file if not exists
 		touch "${DataPath}"
@@ -48,7 +67,7 @@ function fetchData
 		if diff -q "${tmpPath}" "${DataPath}" >/dev/null; then
 			rm -f "${tmpPath}"
 			passed
-			retCode=100
+			retCode=${StatusPassed}
 		else
 			mv -f "${tmpPath}" "${DataPath}"
 			success
@@ -69,16 +88,16 @@ function fetchData
 function applyRoute
 {
 	# Check for data
-	if [ ! -r "$1" ]; then
+	if [[ ! -r "${1}" ]]; then
 		failure
 		echo		
-		return 1
+		return ${StatusFailed}
 	fi
 	
 	
 	# Determine route action
-	if [ -n "$2" ]; then
-		routeAction=$2
+	if [[ -n "${2}" ]]; then
+		routeAction="${2}"
 	else
 		routeAction='add'
 	fi
@@ -87,7 +106,7 @@ function applyRoute
 	# Apply routes
  	while read ip comment; do
  		ip route ${routeAction} blackhole ${ip}
-	done <"$1"
+	done <"${1}"
 }
 
 
@@ -98,7 +117,7 @@ function start
 	applyRoute "${DataPath}" add
 	retCode=$?
 	
-	if [[ retCode -eq 0 ]]; then
+	if [[ ${retCode} == ${StatusOK} ]]; then
 		cat "${DataPath}" >"${LockPath}"
 		success
 	else
@@ -118,7 +137,7 @@ function stop
 	applyRoute ${LockPath} delete
 	retCode=$?
 	
-	if [[ retCode -eq 0 ]]; then
+	if [[ ${retCode} == ${StatusOK} ]]; then
 		rm -f "${LockPath}"
 		success
 	else
@@ -131,14 +150,14 @@ function stop
 }
 
 
-retCode=0
+retCode=${StatusOK}
 
 case "$1" in
 	
 	start)
-		if [ -f "${LockPath}" ]; then
+		if [[ -f "${LockPath}" ]]; then
 			echo "Spamhaus DROP IP blacklist allready active!"
-			exit -1
+			exit ${StatusFailed}
 		fi
 		
 		fetchData
@@ -147,17 +166,17 @@ case "$1" in
 		;;
 	
 	stop)
-		if [ ! -f "${LockPath}" ]; then
+		if [[ ! -f "${LockPath}" ]]; then
 			echo "Spamhaus DROP IP blacklist is NOT active!"
-			exit -1
+			exit ${StatusFailed}
 		fi
-
+		
 		stop
 		retCode=$?
 		;;
 	
 	restart)
-		if [ -f "${LockPath}" ]; then
+		if [[ -f "${LockPath}" ]]; then
 			stop
 		fi
 		
@@ -167,15 +186,22 @@ case "$1" in
 		;;
 	
 	update|reload)
-		if fetchData && [ -f "${LockPath}" ]; then
+		fetchData
+		retCode=$?
+		
+		# Reload blacklist if it has changed and was active before
+		if [[ ${retCode} != ${StatusOK} && -f "${LockPath}" ]]; then
 			stop
 			start
 		fi
-		retCode=0
+		
+		if [[ ${retCode} == ${StatusPassed} ]]; then
+			retCode=${StatusOK}
+		fi
 		;;
 	
 	status)
-		if [ -f "${LockPath}" ]; then
+		if [[ -f "${LockPath}" ]]; then
 			echo "SpamhausDROP IP blacklist is active."
 		else
 			echo "SpamhausDROP IP blacklist is NOT active."
@@ -184,7 +210,7 @@ case "$1" in
 	
 	*)
 		echo $"Usage: $0 {start|stop|restart|reload|update|status}"
-		exit 1
+		exit ${StatusFailed}
 esac
 
 exit ${retCode}

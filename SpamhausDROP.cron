@@ -2,5 +2,5 @@
 # SpamhausDROP.cron
 #
 
-/sbin/service SpamhausDROP update
+/sbin/service SpamhausDROP --batch update
 
