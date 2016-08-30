@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # SpamhausDROP
 #
@@ -14,11 +14,11 @@ source /etc/init.d/functions
 ConfigPath="/etc/sysconfig/SpamhausDROP"
 LockPath="/var/lock/subsys/SpamhausDROP"
 DataPath="/var/lib/SpamhausDROP.data"
-DataURL="http://www.spamhaus.org/drop/{drop,edrop}.lasso"
+DataURL="http://www.spamhaus.org/drop/{drop,edrop,dropv6}.txt"
 
 
 # Read config
-if [ -r "${ConfigPath}" ]; then
+if [[ -r "${ConfigPath}" ]]; then
 	source ${ConfigPath}
 fi
 
@@ -55,7 +55,7 @@ function fetchData
 	tmpPath=$( mktemp "SpamhausDROP.XXXXXXXXXX.data" )
 	
 	# Fetch data
-	curl -s -f "${DataURL}" |egrep -v '^[[:space:]]*(;|$)' >"${tmpPath}"
+	curl -s -f "${DataURL}" |egrep -v '^[[:space:]]*(;|$)' |sort -u -k1,1 >"${tmpPath}"
 	retCode=$?
 	
 	if [[ ${retCode} == ${StatusOK} ]]; then
@@ -105,8 +105,8 @@ function applyRoute
 	
 	# Apply routes
  	while read ip comment; do
- 		ip route ${routeAction} blackhole ${ip}
-	done <"${1}"
+ 		ip route ${routeAction} blackhole ${ip} 2>/dev/null
+	done < "${1}"
 }
 
 
@@ -202,7 +202,7 @@ case "$1" in
 	
 	status)
 		if [[ -f "${LockPath}" ]]; then
-			echo "SpamhausDROP IP blacklist is active."
+			echo "SpamhausDROP IP blacklist is active ("$(wc -l < "${DataPath}")" prefixes blocked)."
 		else
 			echo "SpamhausDROP IP blacklist is NOT active."
 		fi
