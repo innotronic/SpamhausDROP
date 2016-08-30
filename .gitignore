@@ -1,0 +1,20 @@
+# 
+# SpamhausDROP
+# 
+# Copyright:: (c) 2016 Innotronic Ingenieurbüro GmbH
+# URL::       http://www.inno.ch/
+
+# RPMs and SRPMs
+*.rpm
+*.srpm
+
+# Source archives
+*.tar.gz
+
+# RPM build dir
+/.rpmbuild
+
+# Other files
+*.swp
+*~
+.DS_Store
