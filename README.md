@@ -24,7 +24,7 @@ Remove blacklist:
 ## Build
 If you like, build the RPM on your own:
 
-  rpmbuild --rebuild SpamhausDROP-x.x-1.src.rpm
+    rpmbuild --rebuild SpamhausDROP-x.x-1.src.rpm
 
 
 ## License
