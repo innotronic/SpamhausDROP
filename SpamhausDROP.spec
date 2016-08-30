@@ -1,7 +1,7 @@
 Name: SpamhausDROP
 Summary: Applies the "Spamhaus Don't Route Or Peer" IP blacklist
-Version: 1.2
-Release: 5
+Version: 1.3
+Release: 1
 License: GPL
 Group: System Environment/Network
 Source1: SpamhausDROP
@@ -48,6 +48,10 @@ rm -rf %{buildroot}
 
 
 %changelog
+* Thu Aug 30 2016 Innotronic Ingenieurburo GmbH <http://www.inno.ch/> 1.3
+-Use bash instead of common sh
+-Add IPv6
+-Sort and make the list unique after fetching (prevent from duplicate entries)
 * Sun May 11 2014 Innotronic Ingenieurburo GmbH <http://www.inno.ch/> 1.2
 -Improve error handling
 -Add 'slient' mode used in scripts and as cron job
